@@ -15,6 +15,7 @@ GitHub上の複数リポを `trivy fs --list-all-pkgs` で走査し、全パッ�
 pip install .
 vulvul-scan --repos config/repos.json --out results --gh-parallelism 4 --trivy-parallelism 2 --clear-work-dir
 ```
+`--out` を省略すると `./results` に出力されます。指定した場合は `<out>/results` 配下に成果物が置かれます。
 
 ## 出力
 - `results/packages.csv` : owner/repo/branch/commit/パッケージ/バージョン

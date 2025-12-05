@@ -6,7 +6,7 @@
 - Many branches per repo can be slow; consider future extension to limit target branches.
 
 ## Disk
-- `--clear-work-dir` removes clone dirs after each repo. `--out` is wiped at start.
+- `--clear-work-dir` removes clone dirs after each repo. `<out>/results` is wiped at start (default base: current directory).
 
 ## Logs
 - If Trivy logs are too verbose, consider future flags in `trivy_runner` (e.g., `--quiet`, `--scanners vuln`).

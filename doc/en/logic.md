@@ -6,7 +6,7 @@
 3. Clone accessible repos in parallel; set `work_dir`.
 4. List branches via `git branch -r` (excluding `origin/HEAD`); fallback to `["main"]`.
 5. Scan: repositories run in parallel; within a repo, branches run sequentially (`checkout -> rev-parse -> trivy fs --list-all-pkgs -> parse`).
-6. Aggregate into `packages.csv` / `vuls.csv`; delete work dirs if `--clear-work-dir`.
+6. Aggregate into `packages.csv` / `vuls.csv` under `<out>/results`; delete work dirs if `--clear-work-dir`.
 
 ## Concurrency Model
 - Across repos: clone/scan in parallel (gh_parallelism/trivy_parallelism).
@@ -24,5 +24,5 @@
 - `GHRepository`: owner/repo, branches, work_dir/out_dir, packages/vulnerabilities, access state
 
 ## Cleanup
-- `--out` is cleared at start.
+- `<out>/results` is cleared at start (default base is current directory).
 - `--clear-work-dir` deletes cloned work dirs after each repo is processed.

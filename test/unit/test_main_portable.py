@@ -40,10 +40,11 @@ def test_main_portable_outputs_csv(monkeypatch, tmp_path: Path, capsys):
 
     monkeypatch.setattr(main_portable, "get_vuls", fake_get_vuls)
 
-    out_dir = tmp_path / "results"
-    # 事前にゴミを置き、クリアされることを確認する
-    out_dir.mkdir(parents=True, exist_ok=True)
-    junk = out_dir / "old.txt"
+    out_dir = tmp_path / "out_base"
+    results_dir = out_dir / "results"
+    # 事前にゴミを置き、クリアされることを確認する（results配下のみクリア）
+    results_dir.mkdir(parents=True, exist_ok=True)
+    junk = results_dir / "old.txt"
     junk.write_text("old", encoding="utf-8")
 
     argv = [
@@ -58,12 +59,12 @@ def test_main_portable_outputs_csv(monkeypatch, tmp_path: Path, capsys):
 
     main_portable.main()
 
-    packages_csv = (out_dir / "packages.csv").read_text(encoding="utf-8").splitlines()
+    packages_csv = (results_dir / "packages.csv").read_text(encoding="utf-8").splitlines()
     assert packages_csv[0].startswith("owner,repo,branch,commit_hash,package,version")
     assert any("alice,demo,main,abc,pkg,1.0.0" in line for line in packages_csv[1:])
     assert any("bob,repo2,feature,def,pkg2,2.0.0" in line for line in packages_csv[1:])
 
-    vuls_csv = (out_dir / "vuls.csv").read_text(encoding="utf-8").splitlines()
+    vuls_csv = (results_dir / "vuls.csv").read_text(encoding="utf-8").splitlines()
     assert vuls_csv[0].startswith("owner,repo,branch,commit_hash,file_path")
     assert "fixed_version" in vuls_csv[0]
     assert "CVE-1" in vuls_csv[1]
@@ -73,3 +74,36 @@ def test_main_portable_outputs_csv(monkeypatch, tmp_path: Path, capsys):
     captured = capsys.readouterr().out
     assert "WARN" in captured
     assert "bad" in captured
+
+
+def test_main_portable_outputs_csv_default_out(monkeypatch, tmp_path: Path):
+    config_path = tmp_path / "repos.json"
+    config_path.write_text(json.dumps({"alice": ["demo"]}), encoding="utf-8")
+
+    pkg = Package(name="pkg", version="1.0.0", branch="main", commit_hash="abc")
+    success_repo = GHRepository(owner="alice", repo="demo")
+    success_repo.packages = [pkg]
+    success_repo.vulnerabilities = []
+
+    def fake_get_vuls(*_, **__):
+        return [success_repo], []
+
+    monkeypatch.setattr(main_portable, "get_vuls", fake_get_vuls)
+
+    monkeypatch.chdir(tmp_path)
+    results_dir = tmp_path / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    (results_dir / "old.txt").write_text("old", encoding="utf-8")
+
+    argv = [
+        "prog",
+        "--repos",
+        str(config_path),
+    ]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    main_portable.main()
+
+    packages_csv = (results_dir / "packages.csv").read_text(encoding="utf-8").splitlines()
+    assert any("alice,demo,main,abc,pkg,1.0.0" in line for line in packages_csv[1:])
+    assert not (results_dir / "old.txt").exists()

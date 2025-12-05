@@ -5,7 +5,7 @@ Poetryのコンソールスクリプト設定で提供されるエントリ。�
 
 ### 引数
 - `--repos` (必須): リポ一覧JSONへのパス（owner→reposマップ）
-- `--out` (必須): 出力ディレクトリ。存在すれば中身をクリアしてから使用。
+- `--out` (省略可, default カレントディレクトリ): ベース出力ディレクトリ。`<out>/results` をクリアして利用。
 - `--gh-parallelism` (省略可, default 4): 権限確認とcloneの並列度。
 - `--trivy-parallelism` (省略可, default 2): リポ単位スキャンの並列度（リポ内ブランチは逐次）。
 - `--clear-work-dir` (flag): 各リポ処理後に作業ツリーを削除。
@@ -28,7 +28,7 @@ Poetryのコンソールスクリプト設定で提供されるエントリ。�
 ```bash
 vulvul-scan \
   --repos config/repos.json \
-  --out results \
+  --out out_dir \
   --gh-parallelism 5 \
   --trivy-parallelism 5 \
   --clear-work-dir
