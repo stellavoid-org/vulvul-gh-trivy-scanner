@@ -25,7 +25,13 @@ export REPO_TOKEN="repo-pat"
       "org_token_name": "ORG_TOKEN",         // optional
       "repos": [
         "public_repo",
-        { "repo_name": "private_repo", "repo_token_name": "REPO_TOKEN" } // optional
+        {
+          "repo_name": "private_repo",
+          "repo_token_name": "REPO_TOKEN",   // optional
+          "all_branches": false,             // optional, default true
+          "branch_regexes": ["main", "release/.*"], // required if all_branches=false
+          "scan_default_branch": true        // optional, default true
+        }
       ]
     }
   }

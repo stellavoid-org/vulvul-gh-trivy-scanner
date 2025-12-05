@@ -37,7 +37,13 @@ By default outputs land in `./results`; override with `--out <dir>` to use `<dir
       "org_token_name": "ORG_TOKEN",   // optional
       "repos": [
         "public-repo",
-        { "repo_name": "private-repo", "repo_token_name": "REPO_TOKEN" } // optional, overrides org token
+        {
+          "repo_name": "private-repo",
+          "repo_token_name": "REPO_TOKEN",  // optional, overrides org token
+          "all_branches": false,
+          "branch_regexes": ["main", "release/.*"], // required if all_branches=false
+          "scan_default_branch": true               // ensure default branch is included
+        }
       ]
     }
   }
