@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -195,7 +196,10 @@ def _scan_repo_sync(repo: GHRepository, out_root: Path, clear_work_dir: bool) ->
     print(f"INFO: start scanning {repo.owner}/{repo.repo}", file=sys.stderr)
 
     if not repo.branches:
-        repo.branches = _get_remote_branches(repo.work_dir)
+        repo.branches = _get_remote_branches(repo)
+        if not repo.branches:
+            repo.mark_inaccessible("no branches to scan")
+            return repo
 
     repo.out_dir = out_root / "repos" / f"{repo.owner}__{repo.repo}"
     repo.out_dir.mkdir(parents=True, exist_ok=True)
@@ -256,7 +260,10 @@ def _get_commit_hash(work_dir: Path) -> str:
     )
 
 
-def _get_remote_branches(work_dir: Path) -> List[str]:
+def _get_remote_branches(repo: GHRepository) -> List[str]:
+    work_dir = repo.work_dir
+    if not work_dir:
+        return ["main"]
     try:
         output = subprocess.check_output(
             ["git", "-C", str(work_dir), "branch", "-r"],
@@ -279,7 +286,39 @@ def _get_remote_branches(work_dir: Path) -> List[str]:
         if name and name not in branches:
             branches.append(name)
 
-    return branches or ["main"]
+    if repo.all_branches:
+        return branches or ["main"]
+
+    filtered: set[str] = set()
+    regexes = [re.compile(p) for p in (repo.branch_regexes or [])]
+    for b in branches:
+        if any(rgx.search(b) for rgx in regexes):
+            filtered.add(b)
+
+    if repo.scan_default_branch:
+        default_branch = _get_default_branch(work_dir)
+        if default_branch:
+            filtered.add(default_branch)
+
+    if not filtered:
+        return []
+
+    return list(filtered)
+
+
+def _get_default_branch(work_dir: Path) -> str | None:
+    try:
+        ref = subprocess.check_output(
+            ["git", "-C", str(work_dir), "symbolic-ref", "refs/remotes/origin/HEAD"],
+            text=True,
+            env=_git_env(),
+            timeout=10,
+        ).strip()
+        if ref.startswith("refs/remotes/origin/"):
+            return ref.split("/")[-1]
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return None
 
 
 def _git_env() -> dict[str, str]:

@@ -23,10 +23,16 @@ def load_repos_from_json(path: Path) -> list[GHRepository]:
     for owner, value in repos_conf.items():
         org_token_name: str | None = None
         repo_entries = value
+        org_all_branches = None
+        org_branch_regexes = None
+        org_scan_default_branch = None
 
         if isinstance(value, dict):
             repo_entries = value.get("repos")
             org_token_name = value.get("org_token_name")
+            org_all_branches = value.get("all_branches")
+            org_branch_regexes = value.get("branch_regexes")
+            org_scan_default_branch = value.get("scan_default_branch")
 
         if not isinstance(repo_entries, list):
             raise ValueError(f"repos for owner '{owner}' must be a list")
@@ -36,6 +42,13 @@ def load_repos_from_json(path: Path) -> list[GHRepository]:
 
         for entry in repo_entries:
             repo_name, repo_token_name = _parse_repo_entry(entry, owner)
+            all_branches, branch_regexes, scan_default_branch = _parse_branch_config(
+                entry,
+                owner,
+                org_all_branches,
+                org_branch_regexes,
+                org_scan_default_branch,
+            )
 
             token_env_name = repo_token_name or org_token_name
             token = None
@@ -53,6 +66,9 @@ def load_repos_from_json(path: Path) -> list[GHRepository]:
                     repo=repo_name,
                     token=token,
                     token_env_name=token_env_name,
+                    all_branches=all_branches,
+                    branch_regexes=branch_regexes,
+                    scan_default_branch=scan_default_branch,
                 )
             )
     return repos
@@ -87,6 +103,41 @@ def _load_token_from_env(env_name: str | None) -> str | None:
     # トークン名が指定されたが環境変数が未設定の場合は素通り（fallback しない）。
     print(f"WARN: env var '{env_name}' not set; continuing without token", file=sys.stderr)
     return None
+
+
+def _parse_branch_config(
+    entry: object,
+    owner: str,
+    org_all_branches: bool | None,
+    org_branch_regexes: list[str] | None,
+    org_scan_default_branch: bool | None,
+) -> tuple[bool, list[str] | None, bool]:
+    all_branches = True if org_all_branches is None else org_all_branches
+    branch_regexes = org_branch_regexes
+    scan_default_branch = True if org_scan_default_branch is None else org_scan_default_branch
+
+    if isinstance(entry, dict):
+        if "all_branches" in entry:
+            all_branches = entry.get("all_branches")
+        if "branch_regexes" in entry:
+            branch_regexes = entry.get("branch_regexes")
+        if "scan_default_branch" in entry:
+            scan_default_branch = entry.get("scan_default_branch")
+
+    if not isinstance(all_branches, bool):
+        raise ValueError(f"all_branches for owner '{owner}' must be boolean")
+    if not isinstance(scan_default_branch, bool):
+        raise ValueError(f"scan_default_branch for owner '{owner}' must be boolean")
+
+    if not all_branches:
+        if not branch_regexes or not isinstance(branch_regexes, list):
+            raise ValueError(f"branch_regexes must be a non-empty list when all_branches is false (owner '{owner}')")
+        if not all(isinstance(r, str) and r for r in branch_regexes):
+            raise ValueError(f"branch_regexes must be non-empty strings (owner '{owner}')")
+    else:
+        branch_regexes = None
+
+    return all_branches, branch_regexes, scan_default_branch
 
 
 def main() -> None:

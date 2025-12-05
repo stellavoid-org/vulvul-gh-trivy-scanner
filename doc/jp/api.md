@@ -25,13 +25,21 @@ export REPO_TOKEN="repo-pat"
       "org_token_name": "ORG_TOKEN",     // optional
       "repos": [
         "public_repo",
-        { "repo_name": "private_repo", "repo_token_name": "REPO_TOKEN" } // optional
+        {
+          "repo_name": "private_repo",
+          "repo_token_name": "REPO_TOKEN",    // optional
+          "all_branches": false,              // optional, default true
+          "branch_regexes": ["main", "release/.*"], // all_branches=false の場合必須
+          "scan_default_branch": true         // optional, default true
+        }
       ]
     }
   }
 }
 ```
 レガシー形式（`"owner": ["repo1", ...]`）も受け付ける。
+
+トークンなしの場合: RESTは叩かず `git ls-remote` で存在/権限を確認。クレデンシャルヘルパーやSSHでアクセス可能ならそのままclone。権限が無ければstderrを出しつつ該当リポをスキップ。
 
 ### 出力ファイル
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`

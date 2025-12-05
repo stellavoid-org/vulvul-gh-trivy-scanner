@@ -25,13 +25,21 @@ export REPO_TOKEN="repo-pat"
       "org_token_name": "ORG_TOKEN",         // optional
       "repos": [
         "public_repo",
-        { "repo_name": "private_repo", "repo_token_name": "REPO_TOKEN" } // optional
+        {
+          "repo_name": "private_repo",
+          "repo_token_name": "REPO_TOKEN",   // optional
+          "all_branches": false,             // optional, default true
+          "branch_regexes": ["main", "release/.*"], // required if all_branches=false
+          "scan_default_branch": true        // optional, default true
+        }
       ]
     }
   }
 }
 ```
 Legacy form (`"owner": ["repo1", ...]`) is still accepted.
+
+Tokenless runs: permission check is done via `git ls-remote` (no REST). If your credential helper/SSH has access, clone will work; otherwise ls-remote fails fast and the repo is skipped.
 
 ### Outputs
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`

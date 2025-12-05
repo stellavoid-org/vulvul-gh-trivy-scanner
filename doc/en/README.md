@@ -29,7 +29,13 @@ If `--out` is omitted, outputs go to `./results`. Any path given to `--out` will
       "org_token_name": "ORG_TOKEN", // optional
       "repos": [
         "repoA",
-        { "repo_name": "private-repo", "repo_token_name": "REPO_TOKEN" } // optional
+        {
+          "repo_name": "private-repo",
+          "repo_token_name": "REPO_TOKEN", // optional
+          "all_branches": false,           // optional (default true)
+          "branch_regexes": ["main", "release/.*"], // required if all_branches=false
+          "scan_default_branch": true      // optional (default true)
+        }
       ]
     },
     "owner2": ["repoC"]

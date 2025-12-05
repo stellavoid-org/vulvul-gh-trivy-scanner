@@ -2,6 +2,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from vulvul_gh_trivy_scanner import main_portable
 from vulvul_gh_trivy_scanner.models_repo import GHRepository
 from vulvul_gh_trivy_scanner.models_vuln import Package, Vul
@@ -141,6 +143,8 @@ def test_load_repos_with_tokens(monkeypatch, tmp_path: Path):
     assert repo2.repo == "repo2"
     assert repo2.token == "repo-secret"
     assert repo2.token_env_name == "REPO_TOKEN"
+    assert repo1.all_branches is True
+    assert repo2.all_branches is True
 
 
 def test_repo_token_overrides_org(monkeypatch, tmp_path: Path, capsys):
@@ -167,3 +171,44 @@ def test_repo_token_overrides_org(monkeypatch, tmp_path: Path, capsys):
     assert repo.token_env_name == "REPO_TOKEN"
     captured = capsys.readouterr()
     assert "ORG_TOKEN" not in captured.err
+
+
+def test_branch_config_parsing(monkeypatch, tmp_path: Path):
+    config_path = tmp_path / "repos.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "repos": {
+                    "alice": {
+                        "all_branches": False,
+                        "branch_regexes": ["feature/.*"],
+                        "scan_default_branch": False,
+                        "repos": [
+                            {"repo_name": "repo1", "all_branches": False, "branch_regexes": ["hotfix/.*"]},
+                            "repo2",
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    repos = main_portable.load_repos_from_json(config_path)
+    repo1, repo2 = repos
+    assert repo1.all_branches is False
+    assert repo1.branch_regexes == ["hotfix/.*"]
+    assert repo1.scan_default_branch is False
+    assert repo2.all_branches is False  # inherited from org level
+    assert repo2.branch_regexes == ["feature/.*"]
+    assert repo2.scan_default_branch is False
+
+
+def test_branch_regex_required_when_all_branches_false(tmp_path: Path):
+    config_path = tmp_path / "repos.json"
+    config_path.write_text(
+        json.dumps({"repos": {"alice": {"all_branches": False, "repos": ["repo1"]}}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError):
+        main_portable.load_repos_from_json(config_path)

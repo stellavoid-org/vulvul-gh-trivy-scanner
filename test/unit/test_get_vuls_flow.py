@@ -114,6 +114,63 @@ def test_get_vuls_flow(monkeypatch, tmp_path: Path):
     assert len([c for c in git_calls if "checkout" in c]) == 4
 
 
+def test_branch_regex_filters(monkeypatch, tmp_path: Path):
+    class _StubGHAccess:
+        def __init__(self, *_, **__):
+            pass
+
+        async def get_permissions(self, repo: GHRepository):
+            repo.mark_accessible()
+
+        async def clone(self, repo: GHRepository, base_work_dir: Path):
+            repo.work_dir = base_work_dir / f"{repo.owner}__{repo.repo}"
+            repo.work_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.GHAccessWithThrottling", _StubGHAccess)
+
+    def fake_run_trivy_fs(target_dir: Path, output_json: Path):
+        _write_sample_trivy_json(output_json)
+
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.run_trivy_fs", fake_run_trivy_fs)
+
+    def fake_check_output(cmd, text=False, env=None, timeout=None):
+        if "symbolic-ref" in cmd:
+            return "refs/remotes/origin/main\n"
+        if "branch" in cmd:
+            return "  origin/main\n  origin/feature/X\n  origin/hotfix/1\n"
+        if "rev-parse" in cmd:
+            return "abc123\n"
+        return ""
+
+    def fake_run(cmd, check, capture_output=False, text=False, env=None, timeout=None):
+        return type("R", (), {"stdout": ""})()
+
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.subprocess.check_output", fake_check_output)
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.subprocess.run", fake_run)
+
+    repo = GHRepository(
+        owner="alice",
+        repo="demo",
+        all_branches=False,
+        branch_regexes=["feature/.*"],
+        scan_default_branch=True,
+    )
+
+    success, failed = get_vuls(
+        repos=[repo],
+        gh_parallelism=1,
+        trivy_parallelism=1,
+        out_root=tmp_path,
+        clear_work_dir=False,
+    )
+
+    assert failed == []
+    assert len(success) == 1
+    scanned_branches = {p.branch for p in success[0].packages}
+    # default branch main should be included once, feature/X matched, hotfix excluded
+    assert scanned_branches == {"main", "feature/X"}
+
+
 def test_clone_failure_is_marked_failed(monkeypatch, tmp_path: Path):
     class _StubGHAccess:
         def __init__(self, *_, **__):

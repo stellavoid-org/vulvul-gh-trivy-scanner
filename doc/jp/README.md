@@ -29,7 +29,13 @@ vulvul-scan --repos config/repos.json --out results --gh-parallelism 4 --trivy-p
       "org_token_name": "ORG_TOKEN", // optional
       "repos": [
         "repoA",
-        { "repo_name": "private-repo", "repo_token_name": "REPO_TOKEN" } // optional
+        {
+          "repo_name": "private-repo",
+          "repo_token_name": "REPO_TOKEN", // optional
+          "all_branches": false,           // optional (default true)
+          "branch_regexes": ["main", "release/.*"], // all_branches=false なら必須
+          "scan_default_branch": true      // optional (default true)
+        }
       ]
     },
     "owner2": ["repoC"]
