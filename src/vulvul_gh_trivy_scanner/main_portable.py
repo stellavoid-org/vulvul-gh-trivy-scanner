@@ -1,6 +1,8 @@
 import argparse
 import json
+import os
 import shutil
+import sys
 from pathlib import Path
 
 from .get_vuls import get_vuls
@@ -12,13 +14,79 @@ def load_repos_from_json(path: Path) -> list[GHRepository]:
     data = json.loads(path.read_text(encoding="utf-8"))
     repos_conf = data.get("repos") if isinstance(data, dict) and "repos" in data else data
     if not isinstance(repos_conf, dict):
-        raise ValueError("repos config must be an object mapping owner -> [repo, ...]")
+        raise ValueError(
+            "repos config must be an object mapping owner -> [repo, ...] "
+            "or owner -> {org_token_name?, repos: [...]}"
+        )
 
     repos: list[GHRepository] = []
-    for owner, repo_list in repos_conf.items():
-        for repo in repo_list:
-            repos.append(GHRepository(owner=owner, repo=repo))
+    for owner, value in repos_conf.items():
+        org_token_name: str | None = None
+        repo_entries = value
+
+        if isinstance(value, dict):
+            repo_entries = value.get("repos")
+            org_token_name = value.get("org_token_name")
+
+        if not isinstance(repo_entries, list):
+            raise ValueError(f"repos for owner '{owner}' must be a list")
+
+        org_token_loaded = False
+        org_token: str | None = None
+
+        for entry in repo_entries:
+            repo_name, repo_token_name = _parse_repo_entry(entry, owner)
+
+            token_env_name = repo_token_name or org_token_name
+            token = None
+            if repo_token_name:
+                token = _load_token_from_env(repo_token_name)
+            elif org_token_name:
+                if not org_token_loaded:
+                    org_token = _load_token_from_env(org_token_name)
+                    org_token_loaded = True
+                token = org_token
+
+            repos.append(
+                GHRepository(
+                    owner=owner,
+                    repo=repo_name,
+                    token=token,
+                    token_env_name=token_env_name,
+                )
+            )
     return repos
+
+
+def _parse_repo_entry(entry: object, owner: str) -> tuple[str, str | None]:
+    if isinstance(entry, str):
+        return entry, None
+
+    if isinstance(entry, dict):
+        repo_name = (
+            entry.get("repo_name")
+            or entry.get("repo")
+            or entry.get("name")
+        )
+        if not repo_name or not isinstance(repo_name, str):
+            raise ValueError(f"repo entry for owner '{owner}' is missing repo_name")
+        repo_token_name = entry.get("repo_token_name")
+        if repo_token_name and not isinstance(repo_token_name, str):
+            raise ValueError(f"repo_token_name for '{owner}/{repo_name}' must be a string")
+        return repo_name, repo_token_name
+
+    raise ValueError(f"repo entry for owner '{owner}' must be string or object")
+
+
+def _load_token_from_env(env_name: str | None) -> str | None:
+    if not env_name:
+        return None
+    value = os.getenv(env_name)
+    if value:
+        return value
+    # トークン名が指定されたが環境変数が未設定の場合は素通り（fallback しない）。
+    print(f"WARN: env var '{env_name}' not set; continuing without token", file=sys.stderr)
+    return None
 
 
 def main() -> None:

@@ -1,8 +1,8 @@
 # Logic Overview (EN)
 
 ## Flow
-1. Load config (`repos.json`) and build `GHRepository` list.
-2. Permission check in parallel via `GHAccessWithThrottling.get_permissions`.
+1. Load config (`repos.json`) and build `GHRepository` list (repo token > org token > no token; env var missing => tokenless, no fallback).
+2. Permission check in parallel via `GHAccessWithThrottling.get_permissions` (GitHub API `/repos/{owner}/{repo}` with Authorization header when token available; HTTP 401/403/404 logged and mark repo inaccessible).
 3. Clone accessible repos in parallel; set `work_dir`.
 4. List branches via `git branch -r` (excluding `origin/HEAD`); fallback to `["main"]`.
 5. Scan: repositories run in parallel; within a repo, branches run sequentially (`checkout -> rev-parse -> trivy fs --list-all-pkgs -> parse`).

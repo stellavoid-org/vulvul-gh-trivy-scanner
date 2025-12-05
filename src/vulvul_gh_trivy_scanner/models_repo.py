@@ -10,7 +10,9 @@ class GHRepository:
     owner: str
     repo: str
     base_url: str = "https://github.com"
+    api_base_url: str = "https://api.github.com"
     token: Optional[str] = None
+    token_env_name: Optional[str] = None
 
     is_accessible: bool = False
     access_error: Optional[str] = None

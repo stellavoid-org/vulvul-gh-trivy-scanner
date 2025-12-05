@@ -1,8 +1,9 @@
+import os
 import subprocess
 from pathlib import Path
 
 
-def run_trivy_fs(target_dir: Path, output_json: Path) -> None:
+def run_trivy_fs(target_dir: Path, output_json: Path, timeout_sec: int = 300) -> None:
     """
     Trivy FS スキャンを実行し、JSON を output_json に保存する。
     """
@@ -18,4 +19,6 @@ def run_trivy_fs(target_dir: Path, output_json: Path) -> None:
         "--list-all-pkgs",
         str(target_dir),
     ]
-    subprocess.run(cmd, check=True)
+    env = dict(**os.environ)
+    env.setdefault("TRIVY_NON_INTERACTIVE", "true")
+    subprocess.run(cmd, check=True, env=env, timeout=timeout_sec)

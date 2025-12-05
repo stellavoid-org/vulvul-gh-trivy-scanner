@@ -1,8 +1,8 @@
 # ロジック概要
 
 ## 全体フロー
-1. 設定読み込み: `repos.json` から owner→repo のリストを生成し、`GHRepository` に変換。
-2. 権限確認: `GHAccessWithThrottling.get_permissions` を並列で実行。
+1. 設定読み込み: `repos.json` から owner→repo のリストを生成し、`GHRepository` に変換（repo_token > org_token > tokenless。環境変数未設定でもフォールバックなし）。
+2. 権限確認: `GHAccessWithThrottling.get_permissions` を並列で実行（GitHub API `/repos/{owner}/{repo}`。401/403/404 を ERROR ログして以降も継続）。
 3. clone: 権限OKなリポだけ `git clone`（並列）。`work_dir` を設定。
 4. ブランチ列挙: `git branch -r` でリモートブランチ一覧取得（`origin/HEAD` 除外）。未取得なら `["main"]` フォールバック。
 5. スキャン: リポ単位で並列実行。リポ内はブランチ逐次で `checkout → rev-parse → trivy fs --list-all-pkgs → parse`。

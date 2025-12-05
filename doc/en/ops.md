@@ -15,4 +15,5 @@
 ## Troubleshooting
 - `index.lock` conflicts: avoided by sequential branch processing; if it persists, manually remove `.git/index.lock`.
 - `repository not found`: check `repos.json` names or credentials.
+- Permission check failures with tokens: GitHub returns 401 (`Bad credentials`), 403 (`Resource not accessible by personal access token`), or 404 (`Not Found` for private/unknown repos). They are logged as `ERROR` and processing continues for other repos.
 - Trivy missing: ensure `trivy` command is available before running.

@@ -25,7 +25,13 @@ If `--out` is omitted, outputs go to `./results`. Any path given to `--out` will
 ```json
 {
   "repos": {
-    "owner1": ["repoA", "repoB"],
+    "owner1": {
+      "org_token_name": "ORG_TOKEN", // optional
+      "repos": [
+        "repoA",
+        { "repo_name": "private-repo", "repo_token_name": "REPO_TOKEN" } // optional
+      ]
+    },
     "owner2": ["repoC"]
   }
 }

@@ -11,14 +11,27 @@ Provided via Poetry console_scripts. Calls `vulvul_gh_trivy_scanner.main_portabl
 - `--clear-work-dir` (flag): Remove cloned work dirs after processing.
 
 ### Config (`repos.json`)
+Supports optional tokens via env var names. Repo tokens override org tokens; no fallback is attempted if env vars are missing.
+
+```bash
+export ORG_TOKEN="org-pat"
+export REPO_TOKEN="repo-pat"
+```
+
 ```json
 {
   "repos": {
-    "owner_name": ["repo1", "repo2"]
+    "owner_name": {
+      "org_token_name": "ORG_TOKEN",         // optional
+      "repos": [
+        "public_repo",
+        { "repo_name": "private_repo", "repo_token_name": "REPO_TOKEN" } // optional
+      ]
+    }
   }
 }
 ```
-Future extensions (e.g., token/branches) are allowed by design.
+Legacy form (`"owner": ["repo1", ...]`) is still accepted.
 
 ### Outputs
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`

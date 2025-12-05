@@ -107,3 +107,63 @@ def test_main_portable_outputs_csv_default_out(monkeypatch, tmp_path: Path):
     packages_csv = (results_dir / "packages.csv").read_text(encoding="utf-8").splitlines()
     assert any("alice,demo,main,abc,pkg,1.0.0" in line for line in packages_csv[1:])
     assert not (results_dir / "old.txt").exists()
+
+
+def test_load_repos_with_tokens(monkeypatch, tmp_path: Path):
+    config_path = tmp_path / "repos.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "repos": {
+                    "alice": {
+                        "org_token_name": "ORG_TOKEN",
+                        "repos": [
+                            "repo1",
+                            {"repo_name": "repo2", "repo_token_name": "REPO_TOKEN"},
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ORG_TOKEN", "org-secret")
+    monkeypatch.setenv("REPO_TOKEN", "repo-secret")
+
+    repos = main_portable.load_repos_from_json(config_path)
+
+    assert len(repos) == 2
+    repo1 = repos[0]
+    repo2 = repos[1]
+    assert repo1.repo == "repo1"
+    assert repo1.token == "org-secret"
+    assert repo1.token_env_name == "ORG_TOKEN"
+    assert repo2.repo == "repo2"
+    assert repo2.token == "repo-secret"
+    assert repo2.token_env_name == "REPO_TOKEN"
+
+
+def test_repo_token_overrides_org(monkeypatch, tmp_path: Path, capsys):
+    config_path = tmp_path / "repos.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "repos": {
+                    "alice": {
+                        "org_token_name": "ORG_TOKEN",
+                        "repos": [{"repo_name": "repo1", "repo_token_name": "REPO_TOKEN"}],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("REPO_TOKEN", "repo-secret")
+    # org token intentionally missing to ensure no fallback
+
+    repos = main_portable.load_repos_from_json(config_path)
+    repo = repos[0]
+    assert repo.token == "repo-secret"
+    assert repo.token_env_name == "REPO_TOKEN"
+    captured = capsys.readouterr()
+    assert "ORG_TOKEN" not in captured.err

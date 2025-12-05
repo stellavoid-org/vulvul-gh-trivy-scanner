@@ -61,13 +61,13 @@ def test_get_vuls_flow(monkeypatch, tmp_path: Path):
     git_calls = []
     check_output_calls = []
 
-    def fake_run(cmd, check, capture_output=False, text=False):
+    def fake_run(cmd, check, capture_output=False, text=False, env=None, timeout=None):
         git_calls.append(cmd)
         if "rev-parse" in cmd:
             return type("R", (), {"stdout": "abc123\n"})()
         return type("R", (), {"stdout": ""})()
 
-    def fake_check_output(cmd, text=False):
+    def fake_check_output(cmd, text=False, env=None, timeout=None):
         check_output_calls.append(cmd)
         if "branch" in cmd:
             return "  origin/main\n  origin/feature\n  origin/HEAD -> origin/main\n"
@@ -112,3 +112,35 @@ def test_get_vuls_flow(monkeypatch, tmp_path: Path):
     # checkout was invoked per branch and remote branches fetched
     assert any("branch" in cmd for cmd in check_output_calls)
     assert len([c for c in git_calls if "checkout" in c]) == 4
+
+
+def test_clone_failure_is_marked_failed(monkeypatch, tmp_path: Path):
+    class _StubGHAccess:
+        def __init__(self, *_, **__):
+            pass
+
+        async def get_permissions(self, repo: GHRepository):
+            repo.mark_accessible()
+
+        async def clone(self, repo: GHRepository, base_work_dir: Path):
+            repo.mark_inaccessible("clone failed")
+
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.GHAccessWithThrottling", _StubGHAccess)
+
+    def fake_run_trivy_fs(target_dir: Path, output_json: Path):
+        raise AssertionError("trivy should not be called when clone failed")
+
+    monkeypatch.setattr("vulvul_gh_trivy_scanner.get_vuls.run_trivy_fs", fake_run_trivy_fs)
+
+    repos = [GHRepository(owner="alice", repo="demo")]
+    success, failed = get_vuls(
+        repos=repos,
+        gh_parallelism=1,
+        trivy_parallelism=1,
+        out_root=tmp_path,
+        clear_work_dir=False,
+    )
+
+    assert success == []
+    assert len(failed) == 1
+    assert failed[0].access_error == "clone failed"
