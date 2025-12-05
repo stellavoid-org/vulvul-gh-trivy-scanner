@@ -24,7 +24,11 @@ def load_repos_from_json(path: Path) -> list[GHRepository]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repos", required=True, help="Path to repos.json")
-    parser.add_argument("--out", required=True, help="Output directory")
+    parser.add_argument(
+        "--out",
+        default="",
+        help="Base output directory (default: current working directory). Results are written under <out>/results",
+    )
     parser.add_argument("--gh-parallelism", type=int, default=4)
     parser.add_argument("--trivy-parallelism", type=int, default=2)
     parser.add_argument(
@@ -35,17 +39,19 @@ def main() -> None:
     args = parser.parse_args()
 
     repos_conf_path = Path(args.repos)
-    out_root = Path(args.out)
+    out_base = Path(args.out) if args.out else Path.cwd()
+    results_root = out_base / "results"
 
-    # outディレクトリ準備（存在すれば中身クリア、なければ作成）
-    if out_root.exists():
-        for child in out_root.iterdir():
+    out_base.mkdir(parents=True, exist_ok=True)
+    # <out>/results ディレクトリ準備（存在すれば中身クリア、なければ作成）
+    if results_root.exists():
+        for child in results_root.iterdir():
             if child.is_file():
                 child.unlink()
             else:
                 shutil.rmtree(child)
     else:
-        out_root.mkdir(parents=True, exist_ok=True)
+        results_root.mkdir(parents=True, exist_ok=True)
 
     repos = load_repos_from_json(repos_conf_path)
 
@@ -53,7 +59,7 @@ def main() -> None:
         repos=repos,
         gh_parallelism=args.gh_parallelism,
         trivy_parallelism=args.trivy_parallelism,
-        out_root=out_root,
+        out_root=results_root,
         clear_work_dir=args.clear_work_dir,
     )
 
@@ -70,7 +76,7 @@ def main() -> None:
                     "version": p.version,
                 }
             )
-    dump_csv(packages_rows, out_root / "packages.csv")
+    dump_csv(packages_rows, results_root / "packages.csv")
 
     vuls_rows = []
     for r in success_repos:
@@ -89,7 +95,7 @@ def main() -> None:
                     "fixed_version": v.fixed_version or "",
                 }
             )
-    dump_csv(vuls_rows, out_root / "vuls.csv")
+    dump_csv(vuls_rows, results_root / "vuls.csv")
 
     if failed_repos:
         print("WARN: some repositories failed:")

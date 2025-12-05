@@ -11,18 +11,16 @@ Scan multiple GitHub repositories with Trivy and flatten all packages/vulnerabil
 pip install .
 vulvul-scan \
   --repos config/repos.json \
-  --out results \
-  --gh-parallelism 4 \
-  --trivy-parallelism 2 \
-  --clear-work-dir
+  --gh-parallelism 4 --trivy-parallelism 2 --clear-work-dir
 ```
+By default outputs land in `./results`; override with `--out <dir>` to use `<dir>/results`.
 
 ## Structure
 - `src/vulvul_gh_trivy_scanner/`: implementation (DTOs, Trivy runner, GitHub access, CLI)
 - `config/repos.json`: target repos (owner → [repo, ...])
 - `doc/en/`, `doc/jp/`: usage, API, logic, ops
 - `test/unit/`: unit tests
-- `results/`: outputs (not tracked)
+- Default output path: `./results` (not tracked)
 
 ## Outputs
 - `packages.csv`: owner, repo, branch, commit_hash, package, version

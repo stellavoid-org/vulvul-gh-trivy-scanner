@@ -15,6 +15,7 @@ Scan multiple GitHub repositories with `trivy fs --list-all-pkgs`, then aggregat
 pip install .
 vulvul-scan --repos config/repos.json --out results --gh-parallelism 4 --trivy-parallelism 2 --clear-work-dir
 ```
+If `--out` is omitted, outputs go to `./results`. Any path given to `--out` will contain the `results/` subdir for CSVs and artifacts.
 
 ## Outputs
 - `packages.csv`: owner, repo, branch, commit_hash, package, version

@@ -5,7 +5,7 @@ Provided via Poetry console_scripts. Calls `vulvul_gh_trivy_scanner.main_portabl
 
 ### Arguments
 - `--repos` (required): Path to repos JSON (owner -> [repo, ...])
-- `--out` (required): Output directory; contents are cleared if it exists.
+- `--out` (optional, default current dir): Base output directory. `<out>/results` is cleared and used for CSVs/artifacts.
 - `--gh-parallelism` (optional, default 4): Parallelism for GitHub permission checks and clones.
 - `--trivy-parallelism` (optional, default 2): Parallelism across repositories for scanning (branches within a repo are sequential).
 - `--clear-work-dir` (flag): Remove cloned work dirs after processing.
@@ -28,7 +28,7 @@ Future extensions (e.g., token/branches) are allowed by design.
 ```bash
 vulvul-scan \
   --repos config/repos.json \
-  --out results \
+  --out out_dir \
   --gh-parallelism 5 \
   --trivy-parallelism 5 \
   --clear-work-dir
