@@ -1,0 +1,55 @@
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "vulvul-gh-trivy-scanner"
+version = "1.0.0"
+description = "A script for scanning Docker container packages and vulnerabilities."
+authors = [ "stellavoid.org@gmail.com",]
+readme = "README.md"
+packages = [
+  { include = "vulvul_gh_trivy_scanner", from = "src" }
+]
+exclude = [
+  "tests/*",
+  "docs/*",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.11.10"
+injector = "0.22.0"
+numpy = "2.2.1"
+python-dotenv = "1.0.1"
+pydantic = "2.10.5"
+pyyaml = "6.0.2"
+docker = "*"
+pytest = "^9.0.1"
+
+[poetry.group.dev.dependencies]
+pytest = "^7.0"
+toml = "0.10.2"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "test"
+]
+
+[tool.coverage.run]
+source = [
+    "vulvul_gh_trivy_scanner"
+]
+omit = [
+    "src/interface/*",
+    "src/util/interface/*"
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover"
+]
+show_missing = true
+
+[tool.poetry.scripts]
+vulvul-scan = "vulvul_gh_trivy_scanner.cli:main"
