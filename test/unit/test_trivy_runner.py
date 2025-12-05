@@ -8,8 +8,8 @@ from vulvul_gh_trivy_scanner import trivy_runner
 def test_run_trivy_fs_builds_command(monkeypatch, tmp_path: Path):
     calls = []
 
-    def fake_run(cmd, check):
-        calls.append((cmd, check))
+    def fake_run(cmd, check, env=None, timeout=None):
+        calls.append((cmd, check, env, timeout))
 
     monkeypatch.setattr(trivy_runner.subprocess, "run", fake_run)
 
@@ -21,15 +21,17 @@ def test_run_trivy_fs_builds_command(monkeypatch, tmp_path: Path):
 
     assert out.parent.exists()
     assert calls, "subprocess.run should be called"
-    cmd, check = calls[0]
+    cmd, check, env, timeout = calls[0]
     assert check is True
     assert cmd[:3] == ["trivy", "fs", "--format"]
     assert "--list-all-pkgs" in cmd
     assert str(target) in cmd
+    assert env.get("TRIVY_NON_INTERACTIVE") == "true"
+    assert timeout == 300
 
 
 def test_run_trivy_fs_raises_on_failure(monkeypatch, tmp_path: Path):
-    def fake_run(cmd, check):
+    def fake_run(cmd, check, env=None, timeout=None):
         raise trivy_runner.subprocess.CalledProcessError(1, cmd)
 
     monkeypatch.setattr(trivy_runner.subprocess, "run", fake_run)

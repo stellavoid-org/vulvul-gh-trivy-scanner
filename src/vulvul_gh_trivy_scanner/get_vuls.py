@@ -1,7 +1,9 @@
 import asyncio
 import json
+import os
 import shutil
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -163,11 +165,14 @@ def get_vuls(
 
     asyncio.run(_process_clone(accessible, gh_access, base_work_dir))
 
+    cloned_accessible = [r for r in accessible if r.is_accessible and r.work_dir]
+    failed.extend([r for r in accessible if not r.is_accessible or not r.work_dir])
+
     results: list[GHRepository] = []
     with ThreadPoolExecutor(max_workers=trivy_parallelism or 1) as executor:
         future_map = {
             executor.submit(_scan_repo_sync, repo, out_root, clear_work_dir): repo
-            for repo in accessible
+            for repo in cloned_accessible
         }
         for future in as_completed(future_map):
             repo = future.result()
@@ -187,6 +192,8 @@ def _scan_repo_sync(repo: GHRepository, out_root: Path, clear_work_dir: bool) ->
         repo.mark_inaccessible("clone failed")
         return repo
 
+    print(f"INFO: start scanning {repo.owner}/{repo.repo}", file=sys.stderr)
+
     if not repo.branches:
         repo.branches = _get_remote_branches(repo.work_dir)
 
@@ -203,6 +210,8 @@ def _scan_repo_sync(repo: GHRepository, out_root: Path, clear_work_dir: bool) ->
         shutil.rmtree(repo.work_dir, ignore_errors=True)
         repo.work_dir = None
 
+    print(f"INFO: finished scanning {repo.owner}/{repo.repo}", file=sys.stderr)
+
     return repo
 
 
@@ -212,7 +221,7 @@ def _scan_branches_sync(repo: GHRepository, branches: List[str]) -> None:
             vuls, pkgs = _process_branch_sync(repo, branch)
             repo.vulnerabilities.extend(vuls)
             repo.packages.extend(pkgs)
-        except subprocess.CalledProcessError as exc:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             repo.mark_inaccessible(f"branch checkout failed: {branch}: {exc}")
             break
 
@@ -228,13 +237,21 @@ def _process_branch_sync(repo: GHRepository, branch: str) -> tuple[list[Vul], li
 
 
 def _checkout_branch(work_dir: Path, branch: str) -> None:
-    subprocess.run(["git", "-C", str(work_dir), "checkout", branch], check=True)
+    subprocess.run(
+        ["git", "-C", str(work_dir), "checkout", branch],
+        check=True,
+        env=_git_env(),
+        timeout=120,
+    )
 
 
 def _get_commit_hash(work_dir: Path) -> str:
     return (
         subprocess.check_output(
-            ["git", "-C", str(work_dir), "rev-parse", "HEAD"], text=True
+            ["git", "-C", str(work_dir), "rev-parse", "HEAD"],
+            text=True,
+            env=_git_env(),
+            timeout=30,
         ).strip()
     )
 
@@ -242,9 +259,12 @@ def _get_commit_hash(work_dir: Path) -> str:
 def _get_remote_branches(work_dir: Path) -> List[str]:
     try:
         output = subprocess.check_output(
-            ["git", "-C", str(work_dir), "branch", "-r"], text=True
+            ["git", "-C", str(work_dir), "branch", "-r"],
+            text=True,
+            env=_git_env(),
+            timeout=60,
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return ["main"]
 
     branches: List[str] = []
@@ -260,3 +280,9 @@ def _get_remote_branches(work_dir: Path) -> List[str]:
             branches.append(name)
 
     return branches or ["main"]
+
+
+def _git_env() -> dict[str, str]:
+    env = dict(**os.environ)
+    env.setdefault("GIT_TERMINAL_PROMPT", "0")
+    return env

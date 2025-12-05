@@ -11,14 +11,27 @@ Poetryのコンソールスクリプト設定で提供されるエントリ。�
 - `--clear-work-dir` (flag): 各リポ処理後に作業ツリーを削除。
 
 ### 設定ファイル (`repos.json`)
+トークンは環境変数名で指定（リポトークンがorgトークンより優先。環境変数が空でもフォールバックしない）。
+
+```bash
+export ORG_TOKEN="org-pat"
+export REPO_TOKEN="repo-pat"
+```
+
 ```json
 {
   "repos": {
-    "owner_name": ["repo1", "repo2"]
+    "owner_name": {
+      "org_token_name": "ORG_TOKEN",     // optional
+      "repos": [
+        "public_repo",
+        { "repo_name": "private_repo", "repo_token_name": "REPO_TOKEN" } // optional
+      ]
+    }
   }
 }
 ```
-今後tokenやbranchesフィールド拡張を許容する設計。
+レガシー形式（`"owner": ["repo1", ...]`）も受け付ける。
 
 ### 出力ファイル
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`

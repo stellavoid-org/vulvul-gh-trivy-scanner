@@ -30,14 +30,14 @@ def test_clone_runs_concurrently(monkeypatch, tmp_path: Path):
 
     sleep_calls = []
 
-    def fake_run(cmd, check, capture_output=False, text=False):
+    def fake_run(cmd, check, capture_output=False, text=False, env=None, timeout=None):
         # simulate slow checkout to test concurrency
         if "checkout" in cmd:
             sleep_calls.append(cmd)
             time.sleep(0.2)
         return type("R", (), {"stdout": ""})()
 
-    def fake_check_output(cmd, text=False):
+    def fake_check_output(cmd, text=False, env=None, timeout=None):
         if "branch" in cmd:
             return "  origin/main\n  origin/feature\n"
         if "rev-parse" in cmd:

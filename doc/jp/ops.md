@@ -15,4 +15,5 @@
 ## トラブルシュート
 - `index.lock` 競合: ブランチ逐次処理で回避済み。残る場合は手動で `.git/index.lock` を削除。
 - `repository not found`: `repos.json` のスペルや権限（トークン）を確認。
+- トークン利用時の権限エラー: GitHub は 401 (`Bad credentials`), 403 (`Resource not accessible by personal access token`), 404 (`Not Found`/非公開) を返す場合がある。`ERROR` ログを出しつつ他リポは継続。
 - Trivy 未インストール: 実行前に `trivy` コマンドが利用可能か確認。

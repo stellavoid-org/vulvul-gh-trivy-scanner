@@ -1,10 +1,21 @@
 {
-  "your-org-or-name-1": [
-    "YOUR_REPO_1_NAME_HERE",
-    "YOUR_REPO_2_NAME_HERE"
-  ],
-  "your-org-or-name-2": [
-    "YOUR_REPO_1_NAME_HERE",
-    "YOUR_REPO_2_NAME_HERE"
-  ]
+  "repos": {
+    "your-org-or-name-1": {
+      "org_token_name": "ORG_1_REPO_READ_PAT",
+      "repos": [
+        {
+          "repo_name": "YOUR_ORG1_REPO_1_NAME_HERE",
+          "repo_token_name": "ORG_1_REPO_1_PAT"
+        },
+        "YOUR_ORG1_REPO_2_NAME_HERE"
+      ]
+    },
+    "your-org-or-name-2": {
+      "org_token_name": "ORG_2_REPO_READ_PAT",
+      "repos": [
+        "YOUR_ORG2_REPO_1_NAME_HERE",
+        "YOUR_ORG2_REPO_2_NAME_HERE"
+      ]
+    }
+  }
 }
