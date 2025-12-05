@@ -33,6 +33,8 @@ export REPO_TOKEN="repo-pat"
 ```
 Legacy form (`"owner": ["repo1", ...]`) is still accepted.
 
+Tokenless runs: permission check is done via `git ls-remote` (no REST). If your credential helper/SSH has access, clone will work; otherwise ls-remote fails fast and the repo is skipped.
+
 ### Outputs
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`
 - `vuls.csv`: `owner,repo,branch,commit_hash,file_path,vulnerability,package,version,fixed_version`

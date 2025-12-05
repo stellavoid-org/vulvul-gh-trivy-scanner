@@ -33,6 +33,8 @@ export REPO_TOKEN="repo-pat"
 ```
 レガシー形式（`"owner": ["repo1", ...]`）も受け付ける。
 
+トークンなしの場合: RESTは叩かず `git ls-remote` で存在/権限を確認。クレデンシャルヘルパーやSSHでアクセス可能ならそのままclone。権限が無ければstderrを出しつつ該当リポをスキップ。
+
 ### 出力ファイル
 - `packages.csv`: `owner,repo,branch,commit_hash,package,version`
 - `vuls.csv`: `owner,repo,branch,commit_hash,file_path,vulnerability,package,version,fixed_version`
